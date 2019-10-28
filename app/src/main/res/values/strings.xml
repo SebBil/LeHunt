@@ -1,4 +1,7 @@
 <resources>
     <string name="app_name">LeHunt</string>
     <string name="lehunt_logo">lehunt_logo</string>
+
+    <string name="begin_hunt">Jagd beginnen</string>
+    <string name="resume_hunt">Jagd wieder aufnehmen</string>
 </resources>
