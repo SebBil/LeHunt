@@ -6,16 +6,16 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
-public class MainActivity extends AppCompatActivity {
+public class StartActivity extends AppCompatActivity {
 
-    public static final String BEGIN = "BEGINN";
-    public static final int RESUME = 1001;
+    public static final String BEGIN = "BEGIN";
+    public static final String RESUME = "RESUME";
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_start);
     }
 
     public void btnBeginHuntClick(View v){
@@ -28,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void btnResumeHuntClick(View v){
         Intent chooseIntent = new Intent(this, ChooseActivity.class);
-        chooseIntent.putExtra("CHOOSEN", RESUME);
+        chooseIntent.putExtra(RESUME, 1001);
         startActivity(chooseIntent);
     }
 }
