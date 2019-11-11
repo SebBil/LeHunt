@@ -2,10 +2,15 @@ package com.example.lehunt;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 
 public class MainActivity extends AppCompatActivity {
+
+    public static final String BEGIN = "BEGINN";
+    public static final int RESUME = 1001;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -14,10 +19,16 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void btnBeginHuntClick(View v){
-        // TODO: 28.10.2019 from where do we get the challenges?
+
+        Intent chooseIntent = new Intent(this, ChooseActivity.class);
+        chooseIntent.putExtra (BEGIN, 1000);
+        startActivity(chooseIntent);
+
     }
 
     public void btnResumeHuntClick(View v){
-
+        Intent chooseIntent = new Intent(this, ChooseActivity.class);
+        chooseIntent.putExtra("CHOOSEN", RESUME);
+        startActivity(chooseIntent);
     }
 }
