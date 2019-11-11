@@ -46,32 +46,43 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Resume to a Hunt"
-        tools:layout_editor_absoluteX="268dp"
-        tools:layout_editor_absoluteY="102dp" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.11"
+        app:layout_constraintStart_toEndOf="@+id/splitter"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.147" />
 
     <ListView
         android:id="@+id/listHunts"
         android:layout_width="158dp"
         android:layout_height="170dp"
-        tools:layout_editor_absoluteX="393dp"
-        tools:layout_editor_absoluteY="42dp" />
+        app:layout_constraintBottom_toTopOf="@+id/button"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/splitter"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/button"
         android:layout_width="256dp"
         android:layout_height="116dp"
+        android:layout_marginBottom="20dp"
         android:background="@color/lehunt_launcher_background"
         android:text="Continue the Hunt"
-        tools:layout_editor_absoluteX="356dp"
-        tools:layout_editor_absoluteY="260dp" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/splitter" />
 
     <Button
         android:id="@+id/button2"
-        android:layout_width="154dp"
-        android:layout_height="41dp"
+        android:layout_width="103dp"
+        android:layout_height="38dp"
         android:text="Button"
-        tools:layout_editor_absoluteX="561dp"
-        tools:layout_editor_absoluteY="171dp" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.894"
+        app:layout_constraintStart_toEndOf="@+id/splitter"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
 

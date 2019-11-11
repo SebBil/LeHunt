@@ -48,8 +48,6 @@ public class ChooseActivity extends AppCompatActivity {
         }
     }
 
-    // TODO: 11.11.2019 constraints by choose_resume landscape setzen
-
     public void btnDeleteHuntClicked(View v){
 
     }
