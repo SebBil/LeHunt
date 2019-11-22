@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="horizontal"
-    tools:context=".StartActivity">
+    tools:context=".ChooseActivity">
 
     <TextView
         android:id="@+id/textView"
@@ -75,6 +75,7 @@
         android:layout_height="117dp"
         android:background="@color/lehunt_launcher_background"
         android:text="Continue the Hunt"
+        android:onClick="btnResumeHuntClicked"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.416"
@@ -88,7 +89,7 @@
         android:layout_height="39dp"
         android:layout_marginBottom="256dp"
         android:background="@color/lehunt_launcher_background"
-        android:onClick="btnBeginHuntClick"
+        android:onClick="btnDeleteHuntClicked"
         android:text="Delete"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

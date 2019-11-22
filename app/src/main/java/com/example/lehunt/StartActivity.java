@@ -11,19 +11,35 @@ public class StartActivity extends AppCompatActivity {
     public static final String BEGIN = "BEGIN";
     public static final String RESUME = "RESUME";
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_start);
+
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        System.out.println("Start activity stopped");
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        System.out.println("Start Activity destroyed");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        System.out.println("start activity resumed");
     }
 
     public void btnBeginHuntClick(View v){
-
         Intent chooseIntent = new Intent(this, ChooseActivity.class);
         chooseIntent.putExtra (BEGIN, 1000);
         startActivity(chooseIntent);
-
     }
 
     public void btnResumeHuntClick(View v){
