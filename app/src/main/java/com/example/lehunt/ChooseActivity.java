@@ -1,86 +1,147 @@
 package com.example.lehunt;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.BundleCompat;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketAddress;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public class ChooseActivity extends AppCompatActivity {
 
-    // TODO: 22.11.2019 Get hunts from permanent storage
-    ArrayList<String> hunts = new ArrayList<String>() {{
-        add("hunt 1");
-        add("hunt 2");
-        add("hunt 3");
-        add("hunt 4");
-        add("hunt 5");
-        add("hunt 6");
-    }};
+    private Hunt mSelectedHunt;
+    private List<Hunt> mStoredHunts;
+    private ArrayAdapter<Hunt> mHuntAdapter;
 
-    private int posSelectedHunt = -1;
+    EditText burl, huntid;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Intent intent = getIntent();
 
-        if(ChoosenContext(intent)) {
-            setContentView(R.layout.activity_choose_begin);
-        } else {
-            setContentView(R.layout.activity_choose_resume);
+        mStoredHunts = getStoredHunts();
 
-            final ListView myHunts = findViewById(R.id.listHunts);
-            ArrayAdapter<String> adapter = new ArrayAdapter<String>(
-                    this, android.R.layout.simple_list_item_1, hunts
-            );
-            myHunts.setAdapter(adapter);
+        switch (intent.getExtras().getInt("CHOOSE_VALUE")){
+            case 1000:
+                setContentView(R.layout.activity_choose_begin);
 
-            myHunts.setOnItemClickListener(new AdapterView.OnItemClickListener(){
+                burl = findViewById(R.id.etBrokerURL);
+                huntid = findViewById(R.id.etHuntID);
 
-                @Override
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    Object o = myHunts.getItemAtPosition(position);
+                break;
+            case 1001:
+                setContentView(R.layout.activity_choose_resume);
 
-                    Toast.makeText(ChooseActivity.this, "Selected :" + o.toString(), Toast.LENGTH_LONG).show();
-                }
-            });
+                mHuntAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, mStoredHunts);
+
+                final ListView lvMyHunts = findViewById(R.id.listHunts);
+                lvMyHunts.setAdapter(mHuntAdapter);
+
+                lvMyHunts.setOnItemClickListener(new AdapterView.OnItemClickListener(){
+
+                    @Override
+                    public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                        mSelectedHunt = (Hunt)lvMyHunts.getItemAtPosition(position);
+                    }
+                });
+
+                break;
+            default:
+                // should not go there
         }
+    }
+
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        updateStoredHunts();
+    }
+
+    private void updateStoredHunts(){
+        // TODO: 23.11.2019 update all hints of a hunt, or safe a new hunt
+    }
+
+    /**
+     * getStoredHunts
+     * load all Hunts with the hints from permanent storage
+     * @return a List of the Hunts
+     */
+    private List<Hunt> getStoredHunts(){
+        return new ArrayList<Hunt>() {{
+            add(new Hunt("Hunt1234", "broker.url.com"));
+            add(new Hunt("Hunt5678", "broker.url.com"));
+        }};
     }
 
     public void btnDeleteHuntClicked(View v){
         // TODO: 22.11.2019 Remove this from permanent storage
-        if(this.posSelectedHunt != -1)
-            this.hunts.remove(this.posSelectedHunt);
-        Toast.makeText(ChooseActivity.this, "Delete Button clicked", Toast.LENGTH_SHORT).show();
+        if(this.mSelectedHunt != null) {
+            this.mStoredHunts.remove(this.mSelectedHunt);
+            Toast.makeText(this, "selected Hunt: " + this.mSelectedHunt.toString() + " deleted", Toast.LENGTH_SHORT).show();
+            this.mSelectedHunt = null;
+        }
+
+        mHuntAdapter.notifyDataSetChanged();
     }
 
     public void btnBeginHuntClicked(View v){
-        // TODO: 22.11.2019 connect to broker url and save the client uuid
-        Toast.makeText(ChooseActivity.this,"Begin Hunt clicked", Toast.LENGTH_SHORT).show();
+        // TODO: 23.11.2019 check the broker url and the id are available
+
+        Hunt hunt = new Hunt(huntid.getText().toString(), burl.getText().toString());
+        String clientid = UUID.randomUUID().toString();
+        //String clientid = "androidTest";
+        hunt.setClientID(clientid);
+        // System.out.println(hunt.getBrokerURL());
+        // System.out.println(hunt.toString());
+
+        // TODO: 27.12.2019 check the host is reachable
+        // boolean reachable = isHostAvailable(hunt.getBrokerURL(), 1883, 2000);
+
+
+
+        //if(reachable){
+            Bundle bundle = new Bundle();
+            bundle.putSerializable("HUNT", hunt);
+            Intent intent = new Intent(this, GameActivity.class);
+            intent.putExtras(bundle);
+            startActivity(intent);
+        //} else {
+        //    Toast.makeText(this, "The given URL is not reachable on Port 1883", Toast.LENGTH_SHORT).show();
+        //}
     }
 
     public void btnResumeHuntClicked(View v){
         Toast.makeText(ChooseActivity.this, "Resume Hunt clicked", Toast.LENGTH_SHORT).show();
     }
 
-    /**
-     * Look for begin or resume a hunt
-     * @param i
-     * @return True if User begin a new hunt, false for resume a hunt
-     */
-    private boolean ChoosenContext(Intent i){
-        Bundle b = i.getExtras();
 
-        if (b.getInt("BEGIN") == 1000){
+    public static boolean isHostAvailable(final String host, final int port, final int timeout) {
+        try (final Socket socket = new Socket()) {
+            final InetAddress inetAddress = InetAddress.getByName(host);
+            final InetSocketAddress inetSocketAddress = new InetSocketAddress(inetAddress, port);
+
+            socket.connect(inetSocketAddress, timeout);
             return true;
-        } else {
+        } catch (java.io.IOException e) {
+            e.printStackTrace();
             return false;
         }
     }

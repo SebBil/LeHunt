@@ -19,3 +19,7 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# for HiveMQ MQTT Client nessesary
+-keepclassmembernames class io.netty.** { *; }
+-keepclassmembernames class org.jctools.** { *; }
