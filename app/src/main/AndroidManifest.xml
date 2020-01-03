@@ -23,7 +23,7 @@
 
         <service android:name="org.eclipse.paho.android.service.MqttService" ></service>
         <service android:name=".MqttMessageService" ></service>
-        <service android:name=".BluetoothScanService" ></service>
+        <!-- <service android:name=".BluetoothScanService" ></service> -->
     </application>
 
 

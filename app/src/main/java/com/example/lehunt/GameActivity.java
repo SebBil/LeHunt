@@ -3,11 +3,12 @@ package com.example.lehunt;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothManager;
-import android.content.ComponentName;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.os.AsyncTask;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -23,6 +24,7 @@ public class GameActivity extends AppCompatActivity {
     private int REQUEST_ENABLE_BT = 1;
     private String TAG = "GameActivity";
     BluetoothManager bluetoothManager;
+    BluetoothAdapter BTAdapter;
 
     private MqttAndroidClient client;
     private HuntMqttClient huntMqttClient;
@@ -30,42 +32,49 @@ public class GameActivity extends AppCompatActivity {
     private Button btnPubTestingPurpose;
     private Intent mqttService;
     private Intent bluetoothService;
-
+    private String topicPub, topicSub;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
 
+        /** For Testing */
         btnPubTestingPurpose = findViewById(R.id.btnPubTestingPurpose);
 
         Intent i = getIntent();
         Hunt curHunt = (Hunt)i.getExtras().getSerializable("HUNT");
 
-        String topicPub = curHunt.getHuntID() + "/" + curHunt.getClientID() + "/up";
-        String topicSub = curHunt.getHuntID() + "/" + curHunt.getClientID() + "/down";
+        topicPub = curHunt.getHuntID() + "/" + curHunt.getClientID() + "/up";
+        topicSub = curHunt.getHuntID() + "/" + curHunt.getClientID() + "/down";
 
         huntMqttClient = new HuntMqttClient();
         client = huntMqttClient.getMqttClient(getApplicationContext(), curHunt.getBrokerURL(), curHunt.getClientID());
 
+        /** Check Bluetooth is enabled and the adapter is not null, Start it if one is true */
+        if (BTAdapter == null || !BTAdapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        }
 
-        // TODO: 22.11.2019 if ble is disabled finish this activity and make a toast for enable bluetooth
-        // CheckBluetooth();
-
-        // TODO: 27.12.2019 Start thread/service for checking all devices in the environment
-
-
+        // TODO: 27.12.2019 Start thread/service for checking all devices in the environment maybe BCReceiver is enough
 
         Bundle bundle = new Bundle();
         bundle.putSerializable("HUNT", curHunt);
         mqttService = new Intent(GameActivity.this, MqttMessageService.class);
         mqttService.putExtras(bundle);
-        bindService(mqttService,)
+        // bindService(mqttService)
         startService(mqttService);
-
         // TODO: 27.12.2019 subscribe the topic of the cliendid
 
 
+
+        BTAdapter = BluetoothAdapter.getDefaultAdapter();
+        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        this.registerReceiver(bReciever, filter);
+        BTAdapter.startDiscovery();
+
+        /** For Testing */
         btnPubTestingPurpose.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -76,23 +85,39 @@ public class GameActivity extends AppCompatActivity {
                 } catch (MqttException | UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }
-
             }
         });
     }
 
+    @Override
+    protected void onStart(){
+        super.onStart();
+        try {
+            String beaconID = "";
+            Log.d(TAG, "publish test to topic: " + topicPub);
+            huntMqttClient.subscribe(client,topicSub, 1);
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
+    }
 
+    private final BroadcastReceiver bReciever = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                Log.d(TAG, device.getName());
+                // pubishMsgForNewHints(device.getName(), 1);
+            }
+        }
+    };
 
-
-    /**
-     * Check the Bluetoothmanager
-     */
-    private void CheckBluetooth() {
-        bluetoothManager = (BluetoothManager)getSystemService(Context.BLUETOOTH_SERVICE);
-        BluetoothAdapter mBluetoothAdapter = bluetoothManager.getAdapter();
-        if (mBluetoothAdapter == null || !mBluetoothAdapter.isEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+    private void pubishMsgForNewHints(String beaconID, int qos){
+        try {
+            Log.d(TAG, "publish beacon ID to topic for new Hints");
+            huntMqttClient.publishMessage(client, beaconID, qos, topicPub);
+        } catch (MqttException | UnsupportedEncodingException e){
+            e.printStackTrace();
         }
     }
 
@@ -111,54 +136,18 @@ public class GameActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
+        Log.d(TAG, "onStop");
     }
 
-    /*
-    private Mqtt5AsyncClient connectToMQTTBroker(Hunt hunt){
-
-        String clientid = UUID.randomUUID().toString();
-        hunt.setClientID(clientid);
-
-        Mqtt5AsyncClient client = MqttClient.builder()
-                .useMqttVersion5()
-                .identifier(clientid)
-                .serverHost(hunt.getBrokerURL())
-                .serverPort(1883)
-                .buildAsync();
-
-        client.connectWith().send();
-        Toast.makeText(this, "Client connected to Broker", Toast.LENGTH_SHORT).show();
-                /*.whenComplete((connAck, throwable) -> {
-                    if (throwable != null) {
-                        System.out.println("failure to connect");
-                        // Handle connection failure
-                    } else {
-                        String topic = hunt.getHuntID() + "/" + clientid + "/down";
-
-
-                        client.subscribeWith()
-                            .topicFilter(topic)
-                            .callback(publish -> {
-                                System.out.println(publish.getPayloadAsBytes().toString());
-                                // Process the received message
-                            })
-                            .send()
-                            .whenComplete((subAck, throwable2) -> {
-                                if (throwable2 != null) {
-                                    // Handle failure to subscribe
-                                } else {
-                                    System.out.println("sub success");
-                                    Toast.makeText(this, "Client subscribe to topic: ", Toast.LENGTH_SHORT).show();
-
-                                    // Handle successful subscription, e.g. logging or incrementing a metric
-                                }
-                            });
-
-                    }
-                });
-
-        return client;
+    @Override
+    protected void onDestroy(){
+        super.onDestroy();
+        Log.d(TAG, "onDestroy");
+        Log.d(TAG, "clear MQTT Service and Broadcast Receiver for BLE");
+        // TODO: 03.01.2020 clear MQTT Service and Broadcast Receiver for BLE
+        getBaseContext().unregisterReceiver(bReciever);
+        BTAdapter.cancelDiscovery();
+        stopService(mqttService);
     }
- */
 
 }
