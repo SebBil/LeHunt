@@ -14,12 +14,12 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import org.eclipse.paho.android.service.MqttAndroidClient;
+import org.eclipse.paho.android.service.MqttService;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 
-public class MqttMessageService extends Service {
-
+public class MqttMessageService extends MqttService {
 
     private static final String TAG = "MqttMessageService";
     private HuntMqttClient huntMqttClient;
@@ -85,24 +85,7 @@ public class MqttMessageService extends Service {
         Log.d(TAG, "onDestroy");
     }
 
-    private void setMessageNotification(@NonNull String topic, @NonNull String msg) {
-        NotificationCompat.Builder mBuilder =
-                new NotificationCompat.Builder(this)
-                        .setSmallIcon(R.mipmap.lehunt_launcher_round)
-                        .setContentTitle(topic)
-                        .setContentText(msg);
-        Intent resultIntent = new Intent(this, GameActivity.class);
 
-        TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
-        stackBuilder.addParentStack(GameActivity.class);
-        stackBuilder.addNextIntent(resultIntent);
-        PendingIntent resultPendingIntent =
-                stackBuilder.getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT);
-        mBuilder.setContentIntent(resultPendingIntent);
-        NotificationManager mNotificationManager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-        mNotificationManager.notify(100, mBuilder.build());
-    }
 
 
     @Nullable

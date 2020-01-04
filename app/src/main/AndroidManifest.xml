@@ -24,15 +24,18 @@
         <service android:name="org.eclipse.paho.android.service.MqttService" ></service>
         <service android:name=".MqttMessageService" ></service>
         <!-- <service android:name=".BluetoothScanService" ></service> -->
+
+        <service android:name="com.jaalee.sdk.service.BeaconService" android:exported="false" />
     </application>
 
-
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
 
 
     <!-- Permissions for the BLE -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- Permissions for the HiveMQ MQTT Client -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
