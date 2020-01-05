@@ -56,6 +56,8 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 
+    implementation files ('libs/jaalee-beacon-android-sdk-master.jar')
+
     //implementation files('libs/org.eclipse.paho.android.service-1.1.1.jar')
     //implementation ('org.eclipse.paho:org.eclipse.paho.android.service:1.0.2') {
     //    exclude module: 'support-v4'
