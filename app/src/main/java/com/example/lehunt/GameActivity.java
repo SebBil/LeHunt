@@ -30,6 +30,7 @@ import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
 import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,6 +51,8 @@ public class GameActivity extends AppCompatActivity {
     private Beacon beacon;
     private boolean PubMessageSend = false;
     private LinearLayout hints;
+    private int indexOfLastChild = -1;
+    private int beaconMinor = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,7 +69,7 @@ public class GameActivity extends AppCompatActivity {
 
         hints = findViewById(R.id.ll_hints);
 
-         // Configure BeaconManager.
+         // Configure BeaconManager
          beaconManager = new BeaconManager(this);
          beaconManager.setRangingListener(new RangingListener() {
             @Override
@@ -75,39 +78,50 @@ public class GameActivity extends AppCompatActivity {
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-
                         // Note that beacons reported here are already sorted by estimated
                         // distance between device and beacon.
-
                         if (beacons.size() > 0){
                             beacon = (Beacon) beacons.get(0);
                             if ( beacon.getProximityUUID().equalsIgnoreCase(JAALEE_BEACON_PROXIMITY_UUID) ) {
+                                Log.d(TAG, "RSSI: " + beacon.getRssi());
                                 if (beacon.getRssi() > -50) {
-                                    // Log.i("JAALEE", "JAALEE:" + beacon.getBattLevel());
-                                    if (!PubMessageSend) {
-                                        try {
-                                            mqttClient.publish(topicPub, new MqttMessage("new Hint".getBytes()));
+                                    Log.d(TAG, "Name: " + beacon.getName());
+                                    Log.d(TAG, "UUID: " + beacon.getProximityUUID());
+                                    Log.d(TAG, "Major: " + beacon.getMajor());
+                                    Log.d(TAG, "Minor: " + beacon.getMinor());
+                                    Log.d(TAG, "PubMsgSend: " + PubMessageSend);
+                                    Log.d(TAG, "KeyAlreadyPresent: " + curHunt.keyAlreadyPresent(beacon.getMinor()));
+                                    if (!PubMessageSend && !curHunt.keyAlreadyPresent(beacon.getMinor())) {
+                                        int ret = publishMsgForNewHints(String.valueOf(beacon.getMinor()),0);
+                                        Log.d(TAG, "Retrun of publishMsgForNewHints: " + ret);
+                                        if(ret == 0) {
+                                            Log.d(TAG, "inside ret");
+                                            PubMessageSend = true;
                                             LinearLayout.LayoutParams lparams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
                                             TextView tv = new TextView(getApplicationContext());
                                             tv.setLayoutParams(lparams);
-                                            tv.setText("Message to mqtt send and new Hint is comming soon");
+                                            tv.setText("Message to mqtt send and new Hint is comming ...");
                                             hints.addView(tv);
-                                        } catch (MqttException e) {
-                                            e.printStackTrace();
+                                            indexOfLastChild = hints.indexOfChild(tv);
+                                            beaconMinor = beacon.getMinor();
+                                        } else {
+                                            switch (ret){
+                                                case 1:
+                                                    Toast.makeText(getApplicationContext(), "Failure on publish your message for new hints", Toast.LENGTH_SHORT).show();
+                                                    break;
+                                                case 2:
+                                                    break;
+                                                    default:
+                                            }
                                         }
+                                    } else if (!PubMessageSend && curHunt.keyAlreadyPresent(beacon.getMinor())){
+                                        Toast.makeText(getApplicationContext(), "This station is already found, keep going on.", Toast.LENGTH_SHORT).show();
+                                    } else if (PubMessageSend && curHunt.keyAlreadyPresent(beacon.getMinor())) {
+
                                     }
-                                    PubMessageSend = true;
                                 }
-                                Log.d("BEACON", "Name: " + beacon.getName());
-                                Log.d("BEACON", "UUID: " + beacon.getProximityUUID());
-                                Log.d("BEACON", "Major: " + beacon.getMajor());
-                                Log.d("BEACON", "Minor: " + beacon.getMinor());
                             }
-                            //Log.d("BEACON", beacon.getName() + "");
                         }
-                        //List<Beacon> JaaleeBeacons = filterBeacons(beacons);
-
-
                     }
                 });
             }
@@ -132,22 +146,33 @@ public class GameActivity extends AppCompatActivity {
              @Override
              public void connectComplete(boolean reconnect, String serverURI) {
                  if (reconnect) {
-                     Log.d("MQTTCallback","Reconnected to : " + serverURI);
+                     Log.d(TAG,"Reconnected to : " + serverURI);
                      // Because Clean Session is true, we need to re-subscribe
                      //subscribeToTopic();
                  } else {
-                     Log.d("MQTTCallback","Connected to : " + serverURI);
+                     Log.d(TAG,"Connected to : " + serverURI);
                  }
              }
 
              @Override
              public void connectionLost(Throwable throwable) {
-                 Log.d("MQTTCallback","Connection was lost");
+                 Log.d(TAG,"Connection was lost");
              }
 
              @Override
              public void messageArrived(String s, MqttMessage mqttMessage) throws Exception {
-                Log.d("MQTTCallback", "Incomming Message: " + new String(mqttMessage.getPayload()));
+                 String newHint = new String(mqttMessage.getPayload());
+                 Log.d(TAG, "Incomming Message: " + newHint);
+                 JSONObject json = new JSONObject(newHint);
+                 String hint = json.getString("message");
+                 TextView tv = (TextView)hints.getChildAt(indexOfLastChild);
+                 curHunt.newHint(hint, beaconMinor);
+                 tv.setText(hint);
+
+                 // clear up beaconMinor and PubSend
+                 PubMessageSend = false;
+                 beaconMinor = -1;
+                 indexOfLastChild = -1;
              }
 
              @Override
@@ -175,7 +200,7 @@ public class GameActivity extends AppCompatActivity {
 
                  @Override
                  public void onFailure(IMqttToken iMqttToken, Throwable throwable) {
-                     Log.d("MQTTCALLBACK", "Failed to connect");
+                     Log.d(TAG, "Failed to connect");
                  }
              });
          } catch (MqttException e) {
@@ -216,32 +241,18 @@ public class GameActivity extends AppCompatActivity {
             }
         });
     }
-    private List<Beacon> filterBeacons(List<Beacon> beacons) {
-        List<Beacon> filteredBeacons = new ArrayList<Beacon>(beacons.size());
-        for (Beacon beacon : beacons)
-        {
-//    	only detect the Beacon of Jaalee
-    	if ( beacon.getProximityUUID().equalsIgnoreCase(JAALEE_BEACON_PROXIMITY_UUID) )
-    	if (beacon.getRssi() > -50)
-            {
-                Log.i("JAALEE", "JAALEE:"+beacon.getBattLevel());
-                filteredBeacons.add(beacon);
-            }
-        }
-        return filteredBeacons;
-    }
 
     private void subscribeToTopic(){
         try{
             mqttClient.subscribe(topicSub, 0, null, new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken iMqttToken) {
-                    Log.d("SUBSCRIPTION", "Subscribed successfull to topic: " + topicSub);
+                    Log.d(TAG, "Subscribed successfull to topic: " + topicSub);
                 }
 
                 @Override
                 public void onFailure(IMqttToken iMqttToken, Throwable throwable) {
-                    Log.d("SUBSCRIPTION", "Subscribed failed");
+                    Log.d(TAG, "Subscribed failed");
                 }
             });
         } catch (MqttException e) {
@@ -269,12 +280,16 @@ public class GameActivity extends AppCompatActivity {
         }
     }
 
-    private void pubishMsgForNewHints(String beaconID, int qos){
+    private int publishMsgForNewHints(String beaconID, int qos){
         try {
             Log.d(TAG, "publish beacon ID to topic for new Hints");
-            //huntMqttClient.publishMessage(mqttClient, beaconID, qos, topicPub);
+            String msg = new String("{\"type\":\"NewBeacon\",\"advertisment\":\""+beaconID+"\"}");
+            mqttClient.publish(topicPub, new MqttMessage(msg.getBytes()));
+            return 0;
         } catch (Exception e){
-            e.printStackTrace();
+            // TODO: 09.01.2020 Errorhandler with Errorcodes
+            return 1; // 1 for Failure, spezify with Errorcodes
+            //e.printStackTrace();
         }
     }
 
