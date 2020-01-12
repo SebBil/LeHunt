@@ -37,7 +37,7 @@ public class ChooseActivity extends AppCompatActivity {
 
         mStoredHunts = getStoredHunts();
 
-        switch (intent.getExtras().getInt("CHOOSE_VALUE")){
+        switch (intent.getExtras().getInt("CHOOSE_VALUE")) {
             case 1000:
                 setContentView(R.layout.activity_choose_begin);
 
@@ -53,11 +53,11 @@ public class ChooseActivity extends AppCompatActivity {
                 final ListView lvMyHunts = findViewById(R.id.listHunts);
                 lvMyHunts.setAdapter(mHuntAdapter);
 
-                lvMyHunts.setOnItemClickListener(new AdapterView.OnItemClickListener(){
+                lvMyHunts.setOnItemClickListener(new AdapterView.OnItemClickListener() {
 
                     @Override
                     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                        mSelectedHunt = (Hunt)lvMyHunts.getItemAtPosition(position);
+                        mSelectedHunt = (Hunt) lvMyHunts.getItemAtPosition(position);
                     }
                 });
 
@@ -75,25 +75,27 @@ public class ChooseActivity extends AppCompatActivity {
         updateStoredHunts();
     }
 
-    private void updateStoredHunts(){
+    private void updateStoredHunts() {
         // TODO: 23.11.2019 update all hints of a hunt, or safe a new hunt
     }
 
     /**
      * getStoredHunts
      * load all Hunts with the hints from permanent storage
+     *
      * @return a List of the Hunts
      */
-    private List<Hunt> getStoredHunts(){
+    private List<Hunt> getStoredHunts() {
+        // TODO: 12.01.2020 Load Hunts from Harddisk
         return new ArrayList<Hunt>() {{
             add(new Hunt("Hunt1234", "broker.url.com"));
             add(new Hunt("Hunt5678", "broker.url.com"));
         }};
     }
 
-    public void btnDeleteHuntClicked(View v){
-        // TODO: 22.11.2019 Remove this from permanent storage
-        if(this.mSelectedHunt != null) {
+    public void btnDeleteHuntClicked(View v) {
+        // TODO: 22.11.2019 Remove spezific hunt from harddisk
+        if (this.mSelectedHunt != null) {
             this.mStoredHunts.remove(this.mSelectedHunt);
             Toast.makeText(this, "selected Hunt: " + this.mSelectedHunt.toString() + " deleted", Toast.LENGTH_SHORT).show();
             this.mSelectedHunt = null;
@@ -102,47 +104,20 @@ public class ChooseActivity extends AppCompatActivity {
         mHuntAdapter.notifyDataSetChanged();
     }
 
-    public void btnBeginHuntClicked(View v){
-        // TODO: 23.11.2019 check the broker url and the id are available
-
+    public void btnBeginHuntClicked(View v) {
         Hunt hunt = new Hunt(huntid.getText().toString(), burl.getText().toString());
         String clientid = UUID.randomUUID().toString();
-        //String clientid = "androidTest";
         hunt.setClientID(clientid);
-        // System.out.println(hunt.getBrokerURL());
-        // System.out.println(hunt.toString());
 
-        // TODO: 27.12.2019 check the host is reachable
-        // boolean reachable = isHostAvailable(hunt.getBrokerURL(), 1883, 2000);
-
-
-
-        //if(reachable){
-            Bundle bundle = new Bundle();
-            bundle.putSerializable("HUNT", hunt);
-            Intent intent = new Intent(this, GameActivity.class);
-            intent.putExtras(bundle);
-            startActivity(intent);
-        //} else {
-        //    Toast.makeText(this, "The given URL is not reachable on Port 1883", Toast.LENGTH_SHORT).show();
-        //}
+        Bundle bundle = new Bundle();
+        bundle.putSerializable("HUNT", hunt);
+        Intent intent = new Intent(this, GameActivity.class);
+        intent.putExtras(bundle);
+        startActivity(intent);
     }
 
-    public void btnResumeHuntClicked(View v){
+    public void btnResumeHuntClicked(View v) {
         Toast.makeText(ChooseActivity.this, "Resume Hunt clicked", Toast.LENGTH_SHORT).show();
     }
 
-
-    public static boolean isHostAvailable(final String host, final int port, final int timeout) {
-        try (final Socket socket = new Socket()) {
-            final InetAddress inetAddress = InetAddress.getByName(host);
-            final InetSocketAddress inetSocketAddress = new InetSocketAddress(inetAddress, port);
-
-            socket.connect(inetSocketAddress, timeout);
-            return true;
-        } catch (java.io.IOException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
 }

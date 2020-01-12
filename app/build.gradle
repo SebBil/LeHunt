@@ -33,7 +33,7 @@ repositories {
     }
 }
 
-/*
+
 buildscript {
     repositories {
         google()
@@ -42,10 +42,10 @@ buildscript {
     dependencies {
         classpath 'gradle.plugin.com.github.sgtsilvio.gradle:android-retrofix:0.2.1'
     }
-}*/
+}
 
-//apply plugin: 'com.android.application'
-//apply plugin: 'com.github.sgtsilvio.gradle.android-retrofix'
+apply plugin: 'com.android.application'
+apply plugin: 'com.github.sgtsilvio.gradle.android-retrofix'
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
@@ -56,17 +56,15 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 
-    implementation files ('libs/jaalee-beacon-android-sdk-master.jar')
+    // https://mvnrepository.com/artifact/org.eclipse.paho/org.eclipse.paho.client.mqttv3
+    // implementation group: 'org.eclipse.paho', name: 'org.eclipse.paho.client.mqttv3', version: '1.2.2'
 
-    //implementation files('libs/org.eclipse.paho.android.service-1.1.1.jar')
-    //implementation ('org.eclipse.paho:org.eclipse.paho.android.service:1.0.2') {
-    //    exclude module: 'support-v4'
-    //}
+    //implementation files ('libs/jaalee-beacon-android-sdk-master.jar')
 
-    //implementation group: 'log4j', name: 'log4j', version: '1.2.17'
+    implementation group: 'log4j', name: 'log4j', version: '1.2.17'
 
-    //implementation group: 'com.hivemq', name: 'hivemq-mqtt-client', version: '1.1.3'
-
-    //implementation 'net.sourceforge.streamsupport:android-retrostreams:1.7.1'
-    //implementation 'net.sourceforge.streamsupport:android-retrofuture:1.7.1'
+    // HiveMQ Mqtt client
+    implementation group: 'com.hivemq', name: 'hivemq-mqtt-client', version: '1.1.3'
+    implementation 'net.sourceforge.streamsupport:android-retrostreams:1.7.1'
+    implementation 'net.sourceforge.streamsupport:android-retrofuture:1.7.1'
 }
