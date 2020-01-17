@@ -7,7 +7,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -16,8 +15,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.TreeMap;
 
 @TargetApi(24)
@@ -28,7 +25,7 @@ public class HintPreviousFragment extends Fragment {
     private static HintPreviousFragment hpf;
 
 
-    public static HintPreviousFragment GetInstance() {
+    static HintPreviousFragment GetInstance() {
         if(hpf != null)
             return hpf;
         hpf = new HintPreviousFragment();
@@ -43,12 +40,9 @@ public class HintPreviousFragment extends Fragment {
         scrollView = view.findViewById(R.id.scrollView);
 
         Button btnBackToHunt = view.findViewById(R.id.btnBackToHunt);
-        btnBackToHunt.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                HintCurrentFragment hcf = HintCurrentFragment.GetInstance();
-                ((GameActivity)getActivity()).replaceFragment(hcf, "hcf");
-            }
+        btnBackToHunt.setOnClickListener(v -> {
+            HintCurrentFragment hcf = HintCurrentFragment.GetInstance();
+            ((GameActivity)getActivity()).replaceFragment(hcf, "hcf");
         });
         return view;
     }
@@ -67,7 +61,6 @@ public class HintPreviousFragment extends Fragment {
             allPrevHints.setLayoutParams(params);
             allPrevHints.setOrientation(LinearLayout.VERTICAL);
             hints.forEach((key, value) -> {
-                Log.d("updatehintlist", key + " - " + value);
                 addTV("Hint " + (key + 1) + ":");
                 addTV(value);
             });
