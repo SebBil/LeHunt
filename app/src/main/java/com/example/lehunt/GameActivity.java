@@ -2,22 +2,34 @@ package com.example.lehunt;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.app.TaskStackBuilder;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.RemoteException;
 import android.util.Log;
-import android.widget.LinearLayout;
+import android.view.View;
+import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3Client;
@@ -32,15 +44,17 @@ import com.jaalee.sdk.ServiceReadyCallback;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
-import static android.os.Build.HOST;
-
 public class GameActivity extends AppCompatActivity {
 
-    private static final String JAALEE_BEACON_PROXIMITY_UUID = "EBEFD083-70A2-47C8-9837-E7B5634DF524";//Jaalee BEACON Default UUID
+    //Jaalee BEACON Default UUID
+    private static final String JAALEE_BEACON_PROXIMITY_UUID = "EBEFD083-70A2-47C8-9837-E7B5634DF524";
     private static final Region ALL_BEACONS_REGION = new Region("rid", null, null, null);
 
     private static final int PERMISSION_REQUEST_COARSE_LOCATION = 456;
@@ -52,66 +66,63 @@ public class GameActivity extends AppCompatActivity {
     private String topicPub, topicSub;
     private int REQUEST_ENABLE_BT = 1;
     private Beacon beacon;
-    private boolean PubMessageSend = false;
-    private LinearLayout hints;
-    private int indexOfLastChild = -1;
-    private int beaconMinor = -1;
+    private Hunt curHunt;
+    private TextView tvCurrentHunt;
+    private int beaconMinor;
+    private HintCurrentFragment hcf;
+    private HintPreviousFragment hpf;
+    private FrameLayout fragContainer;
 
     @Override
+    @TargetApi(24)
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
 
-        Intent i = getIntent();
-        Hunt curHunt = (Hunt) i.getExtras().getSerializable("HUNT");
+        beaconManager = new BeaconManager(this);
 
-        topicPub = curHunt.getHuntID() + "/" + curHunt.getClientID() + "/up";
-        topicSub = curHunt.getHuntID() + "/" + curHunt.getClientID() + "/down";
-
-        hints = findViewById(R.id.ll_hints);
+        // If Bluetooth is not enabled, let user enable it.
+        if (!beaconManager.isBluetoothEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+        } else {
+            connectToService();
+        }
 
         // Configure BeaconManager
-        beaconManager = new BeaconManager(this);
-        beaconManager.setRangingListener(new RangingListener() {
-            @Override
-            public void onBeaconsDiscovered(Region region, final List beacons) {
-                // Note that results are not delivered on UI thread.
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Note that beacons reported here are already sorted by estimated
-                        // distance between device and beacon.
-                        if (beacons.size() > 0) {
-                            beacon = (Beacon) beacons.get(0);
-                            if (beacon.getProximityUUID().equalsIgnoreCase(JAALEE_BEACON_PROXIMITY_UUID)) {
-                                Log.d(TAG, "RSSI: " + beacon.getRssi());
-                                if (beacon.getRssi() > -50) {
-                                    Log.d(TAG, "Name: " + beacon.getName());
-                                    Log.d(TAG, "UUID: " + beacon.getProximityUUID());
-                                    Log.d(TAG, "Major: " + beacon.getMajor());
-                                    Log.d(TAG, "Minor: " + beacon.getMinor());
-                                    Log.d(TAG, "PubMsgSend: " + PubMessageSend);
-                                    Log.d(TAG, "KeyAlreadyPresent: " + curHunt.keyAlreadyPresent(beacon.getMinor()));
-                                    if (!PubMessageSend && !curHunt.keyAlreadyPresent(beacon.getMinor())) {
-                                        publishMsgForNewHints(String.valueOf(beacon.getMajor()), String.valueOf(beacon.getMinor()));
-                                        PubMessageSend = true;
-                                        LinearLayout.LayoutParams lparams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                                        TextView tv = new TextView(getApplicationContext());
-                                        tv.setLayoutParams(lparams);
-                                        tv.setText("Message to mqtt send and new Hint is comming ...");
-                                        hints.addView(tv);
-                                        indexOfLastChild = hints.indexOfChild(tv);
-                                        beaconMinor = beacon.getMinor();
-                                    } else if (!PubMessageSend && curHunt.keyAlreadyPresent(beacon.getMinor())) {
-                                        Toast.makeText(getApplicationContext(), "This station is already found, keep going on.", Toast.LENGTH_SHORT).show();
-                                    } else if (PubMessageSend && curHunt.keyAlreadyPresent(beacon.getMinor())) {
+        beaconManager.setRangingListener(LookForNewBeacons);
 
-                                    }
-                                }
-                            }
-                        }
-                    }
+        // Check all Permissions
+        System.out.println("checkPermissions");
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION_REQUEST_COARSE_LOCATION);
+        }
+
+        System.out.println("gameactivity OnCreate");
+
+        Intent i = getIntent();
+        curHunt = (Hunt) i.getExtras().getSerializable("HUNT");
+
+        hcf = HintCurrentFragment.GetInstance();
+        hpf = HintPreviousFragment.GetInstance();
+
+        this.replaceFragment(hcf, "hcf");
+
+        fragContainer = findViewById(R.id.framelayoutcontainer);
+        fragContainer.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            @Override
+            public void onLayoutChange(View v, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
+                Fragment frag = getSupportFragmentManager().findFragmentByTag("hcf");
+                if(frag == null){
+                    // hpf
+                    hpf.UpdateHintList(curHunt.getHints());
+                    return;
+                }
+                curHunt.getHints().forEach((key, value)->{
+                    if(curHunt.getCurrentStation()-1 == (int)key)
+                        hcf.UpdateHint((String)value);
                 });
+
             }
         });
 
@@ -124,13 +135,20 @@ public class GameActivity extends AppCompatActivity {
         try {
             Mqtt3ConnAck mqtt3ConnAck = mqttClient.connect().get();
             if (mqtt3ConnAck.getReturnCode().isError()) {
-                Log.d(TAG, "Client could not connect to MQTT Broker with address " + curHunt.getBrokerURL());
+                // TODO: 14.01.2020 Finish the Activity beacause of the client couldn't connect to the broker
+                System.out.println("Client could not connect to MQTT Broker with address " + curHunt.getBrokerURL());
             } else {
-                Log.d(TAG, "Client conncted successfully to MQTT Broker with address " + curHunt.getBrokerURL());
+                System.out.println("Client conncted successfully to MQTT Broker with address " + curHunt.getBrokerURL());
             }
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
+
+        topicPub = curHunt.getHuntID() + "/" + curHunt.getClientID() + "/up";
+        topicSub = curHunt.getHuntID() + "/" + curHunt.getClientID() + "/down";
+
+        tvCurrentHunt = findViewById(R.id.tvCurrentHunt);
+        tvCurrentHunt.setText("Current Hunt: " + curHunt.getHuntID());
 
         OnMessageCallback onMessageCallback = new OnMessageCallback(curHunt, this);
 
@@ -139,90 +157,83 @@ public class GameActivity extends AppCompatActivity {
                 .qos(MqttQos.EXACTLY_ONCE)
                 .callback(onMessageCallback)
                 .send();
-        Log.d(TAG, "Client subscribed to topic " + topicSub);
+        System.out.println("Client subscribed to topic " + topicSub);
 
-        mqttClient.publishWith()
-                .topic("test")
-                .payload("testnachricht".getBytes())
-                .qos(MqttQos.EXACTLY_ONCE)
-                .send();
+
+        //TODO request the first hint to start the hunt but only if this is a new beginning hunt
+        if (curHunt.getHints().size() == 0)
+            mqttClient.publishWith()
+                    .topic(topicPub)
+                    .qos(MqttQos.EXACTLY_ONCE)
+                    .payload("{type:FirstHint,advertisement:0,station:0}".getBytes())
+                    .send();
     }
 
-    @TargetApi(24)
-    private class OnMessageCallback implements Consumer<Mqtt3Publish> {
-
-        Hunt curHunt;
-        Context context;
-
-        OnMessageCallback(Hunt hunt, Context context) {
-            this.context = context;
-            this.curHunt = hunt;
-        }
-
+    private RangingListener LookForNewBeacons = new RangingListener() {
         @Override
-        public void accept(Mqtt3Publish mqtt3Publish) {
-            String newHint = new String(mqtt3Publish.getPayloadAsBytes());
-            Log.d(TAG, "Incomming Message: " + newHint);
-
-            String hint = "";
-            try {
-                JSONObject json = new JSONObject(newHint);
-                hint = json.getString("message");
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-            curHunt.newHint(hint, beaconMinor);
-            Log.d(TAG, hint);
-            Log.d(TAG, curHunt.toString());
-            TextView tv = (TextView) hints.getChildAt(indexOfLastChild);
-            Log.d(TAG, "get tv is ok");
-
-            // TODO: 12.01.2020 find a solution for setting the hint from another class
-            tv.setText(hint);
-
-            // clear up beaconMinor and PubSend
-            PubMessageSend = false;
-            beaconMinor = -1;
-            indexOfLastChild = -1;
+        public void onBeaconsDiscovered(Region region, List<Beacon> list) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    // Note that beacons reported here are already sorted by estimated
+                    // distance between device and beacon.
+                    if (list.size() > 0) {
+                        beacon = (Beacon) list.get(0);
+                        if (beacon.getProximityUUID().equalsIgnoreCase(JAALEE_BEACON_PROXIMITY_UUID)) {
+                            // System.out.println("RSSI: " + beacon.getRssi());
+                            if (beacon.getRssi() > -50) {
+                                //System.out.println("Name: " + beacon.getName());
+                                //System.out.println("UUID: " + beacon.getProximityUUID());
+                                //System.out.println("Major: " + beacon.getMajor());
+                                //System.out.println( "Minor: " + beacon.getMinor());
+                                //System.out.println("KeyAlreadyPresent: " + curHunt.keyAlreadyPresent(beacon.getMinor()));
+                                beaconMinor = beacon.getMinor();
+                                if (!curHunt.keyAlreadyPresent(beaconMinor)) {
+                                    publishMsgForNewHints(String.valueOf(beaconMinor), curHunt);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
-    }
+    };
 
     @Override
     protected void onStart() {
         super.onStart();
-
-        // Check if device supports Bluetooth Low Energy.
-        if (!beaconManager.hasBluetooth()) {
-            Toast.makeText(this, "Device does not have Bluetooth Low Energy", Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        // If Bluetooth is not enabled, let user enable it.
-        if (!beaconManager.isBluetoothEnabled()) {
-            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-        } else {
-            connectToService();
-        }
-
-        // Check all Permissions
-        Log.d(TAG, "checkPermissions");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION_REQUEST_COARSE_LOCATION);
-        }
+        System.out.println("OnStart gameact");
     }
 
-    private void connectToService() {
-        beaconManager.connect(new ServiceReadyCallback() {
-            @Override
-            public void onServiceReady() {
-                try {
-                    beaconManager.startRangingAndDiscoverDevice(ALL_BEACONS_REGION);
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+    @Override
+    protected void onPause() {
+        super.onPause();
+        System.out.println("onPause gameact");
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        System.out.println("onResume gameact");
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        System.out.println("onStop gameact");
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        System.out.println("onDestroy gameact");
+
+        save(curHunt);
+        System.out.println("BeaconManager disconnected");
+        beaconManager.disconnect();
+        System.out.println("MQTT Client disconnected");
+        mqttClient.disconnect();
     }
 
     @Override
@@ -238,10 +249,50 @@ public class GameActivity extends AppCompatActivity {
         }
     }
 
+    /**
+     * Replace current Fragment with the destination Fragment.
+     * @param frag
+     */
+    public void replaceFragment(Fragment frag, String tag){
+        // First get FragmentManager object.
+        FragmentManager fragmentManager = this.getSupportFragmentManager();
 
-    private void publishMsgForNewHints(String beaconMajor, String beaconMiner) {
-        Log.d(TAG, "publish beacon ID to topic for new Hints");
-        String msg = new String("{type:NewBeacon,advertisment:" + beaconMajor + "-" + beaconMiner + "}");
+        // Begin Fragment transaction.
+        FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
+
+        // Replace the layout holder with the required Fragment object.
+        fragmentTransaction.replace(R.id.framelayoutcontainer, frag, tag);
+
+        // Commit the Fragment replace action.
+        fragmentTransaction.commit();
+    }
+
+    /**
+     * Start Service for the Ranging and Discovering Devices
+     */
+    private void connectToService() {
+        beaconManager.connect(new ServiceReadyCallback() {
+            @Override
+            public void onServiceReady() {
+                try {
+                    beaconManager.startRangingAndDiscoverDevice(ALL_BEACONS_REGION);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+    }
+
+    /**
+     * Send the message to the broker that a new Beacon was discovered
+     *
+     * @param beaconMiner
+     * @param hunt
+     */
+    private void publishMsgForNewHints(String beaconMiner, Hunt hunt) {
+
+        System.out.println("publish beacon ID to topic for new Hints");
+        String msg = "{type:NewBeacon,advertisement:" + beaconMiner + ",station:" + hunt.getCurrentStation() + "}";
         mqttClient.publishWith()
                 .topic(topicPub)
                 .qos(MqttQos.EXACTLY_ONCE)
@@ -250,34 +301,195 @@ public class GameActivity extends AppCompatActivity {
 
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Log.d(TAG, "onPause");
+    public void save(Hunt obj) {
+        FileOutputStream fos = null;
+
+        String ext = ".json";
+        StringBuilder sb = new StringBuilder(obj.getHuntID()).append(ext);
+        String fileName = sb.toString();
+        try {
+            fos = openFileOutput(fileName, MODE_PRIVATE);
+            fos.write(new Gson().toJson(obj).getBytes());
+
+            Toast.makeText(this, "Saved to " + getFilesDir() + "/" + fileName,
+                    Toast.LENGTH_LONG).show();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(TAG, "onResume");
+    public void sendNotification(String title){
+
+        Context context = getApplicationContext();
+
+        NotificationManager notificationManager = (NotificationManager) context
+                .getSystemService(Activity.NOTIFICATION_SERVICE);
+        Intent notificationIntent = new Intent(
+                context.getApplicationContext(), GameActivity.class);
+
+        PendingIntent pIntent = PendingIntent.getActivity(
+                context,0,notificationIntent,PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_ONE_SHOT
+                );
+        Notification notification = new Notification.Builder(context)
+                .setContentTitle(title)
+                .setContentText("New Informations available")
+                .setDefaults(
+                        Notification.DEFAULT_SOUND
+                                | Notification.DEFAULT_VIBRATE)
+                .setContentIntent(pIntent).setAutoCancel(true)
+                .setSmallIcon(R.mipmap.lehunt_launcher_round).build();
+        notificationManager.notify(2, notification);
     }
 
-    @Override
-    protected void onStop() {
-        // TODO: 11.01.2020 Safe/Update Current Hunt to Harddisk
-        Log.d(TAG, "onStop");
-        super.onStop();
+    public void syncCurrentHunt(Hunt hunt){
+        this.curHunt = hunt;
     }
 
-    @Override
-    protected void onDestroy() {
-        Log.d(TAG, "onDestroy");
+    /**
+     * Class for the Callback of messeages that came in
+     */
+    @TargetApi(24)
+    private class OnMessageCallback implements Consumer<Mqtt3Publish> {
 
-        Log.d("BM", "BeaconManager disconnected");
-        beaconManager.disconnect();
-        Log.d(TAG, "MQTT Client disconnected");
-        mqttClient.disconnect();
+        Hunt curHunt;
+        Context context;
 
-        super.onDestroy();
+        OnMessageCallback(Hunt hunt, Context context) {
+            this.context = context;
+            this.curHunt = hunt;
+        }
+
+        @Override
+        public void accept(Mqtt3Publish mqtt3Publish) {
+            String newHint = new String(mqtt3Publish.getPayloadAsBytes());
+            System.out.println("Incomming Message: " + newHint);
+
+            /*
+             * Types that can came back:
+             *   Info, Error, NewInformation, Finished
+             */
+            String type = "", response = "";
+            try {
+                JSONObject json = new JSONObject(newHint);
+                type = json.getString("type");
+                response = json.getString("message");
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+            switch (type) {
+                case "Info":
+                    // System.out.println("Info: " + response);
+                    makeToast("Info: " + response);
+                    //Toast.makeText(context, "Info: " + response, Toast.LENGTH_SHORT).show();
+                    break;
+                case "Error":
+                    //System.out.println("Error: " + response);
+                    makeToast("Error: " + response);
+                    //Toast.makeText(context, "Error: " + response, Toast.LENGTH_SHORT).show();
+                    break;
+                case "NewInformation":
+                    curHunt.newHint(beaconMinor, response);
+                    //System.out.println("Response: " + response);
+                    //System.out.println("Size of Hints: " + curHunt.getHints().size());
+
+                    if(beaconMinor == 0){
+                        sendNotify("First Hint");
+                    } else {
+                        sendNotify(type);
+                    }
+
+                    update(response, this.curHunt);
+
+                    break;
+                case "Finished":
+                    curHunt.newHint(beaconMinor, response);
+                    update(response, this.curHunt);
+                    System.out.println("Finished case");
+                    sendNotify(type);
+                    alertFin(type, response);
+                    break;
+                default:
+                    break;
+
+            }
+        }
+
+        public void alertFin(String title, String message) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    AlertDialog.Builder aldb = new AlertDialog.Builder(GameActivity.this);
+                    //System.out.println("in finished on ui thread");
+                    //set title
+                    aldb.setTitle(title);
+                    aldb
+                            .setMessage(message)
+                            .setCancelable(false)
+                            .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+                                public void onClick(DialogInterface dialog, int id) {
+                                    mqttClient.unsubscribeWith()
+                                            .topicFilter(topicSub)
+                                            .send();
+
+                                    mqttClient.disconnect();
+                                    beaconManager.disconnect();
+
+                                    ((Activity) context).finish();
+                                }
+                            });
+                    System.out.println("after aldb sets");
+
+                    // create alert dialog
+                    AlertDialog alertDialog = aldb.create();
+
+                    System.out.println("after create");
+
+                    alertDialog.show();
+                }
+            });
+        }
+
+        public void makeToast(String msg) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        public void update(String s, Hunt h){
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    System.out.println(s);
+                    syncCurrentHunt(h);
+                    hcf.UpdateHint(s);
+                }
+            });
+        }
+
+        public void sendNotify(String title) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    System.out.println("in send notify");
+                    sendNotification(title);
+                }
+            });
+        }
+
     }
 }
