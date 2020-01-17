@@ -40,34 +40,28 @@
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintVertical_bias="0.3"></View>
 
-    <ScrollView
-        android:id="@+id/scrollView"
-        android:layout_width="0dp"
+    <TextView
+        android:id="@+id/tvCurrentHunt"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="31dp"
+        android:paddingLeft="20dp"
+        android:textAlignment="textStart"
+        android:textSize="22sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/splitter" />
+
+    <FrameLayout
+        android:id="@+id/framelayoutcontainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/splitter"
-        app:layout_constraintVertical_weight="1">
+        app:layout_constraintTop_toBottomOf="@+id/tvCurrentHunt">
 
-        <LinearLayout
-            android:id="@+id/ll_hints"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:weightSum="5">
-
-            <TextView
-                android:id="@+id/textView4"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_weight="0.9"
-                android:text="Hinweis 1: fjenwufngewjoaöfjiekwöaonfugwieöafmjkeaöwnugjjfejöwoajkjfdmnweuiögiowmkaemnfuiweaiöjmfiwa" />
-
-        </LinearLayout>
-    </ScrollView>
+    </FrameLayout>
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

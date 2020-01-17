@@ -57,6 +57,7 @@
         android:id="@+id/listHunts"
         android:layout_width="158dp"
         android:layout_height="170dp"
+        android:background="@color/lehunt_launcher_background"
         app:layout_constraintBottom_toTopOf="@+id/button"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/splitter"
