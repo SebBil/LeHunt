@@ -1,11 +1,10 @@
-package com.example.lehunt;
+package de.bilda.lehunt.activities;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
@@ -21,6 +20,9 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+
+import de.bilda.lehunt.R;
+import de.bilda.lehunt.classes.Hunt;
 
 public class ChooseActivity extends AppCompatActivity {
 

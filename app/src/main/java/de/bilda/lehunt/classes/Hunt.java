@@ -1,14 +1,6 @@
-package com.example.lehunt;
-
-import android.util.ArrayMap;
-
-import org.json.JSONException;
-import org.json.JSONObject;
+package de.bilda.lehunt.classes;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.TreeMap;
@@ -65,6 +57,14 @@ public class Hunt extends Observable implements Serializable{
         }
         setChanged();
         notifyObservers();
+    }
+
+    /**
+     * Funktion to get the last Hint of the hunt
+     * @return a String that include the ast entry
+     */
+    public String getLastHint(){
+        return mHints.lastEntry().getValue();
     }
 
     /**

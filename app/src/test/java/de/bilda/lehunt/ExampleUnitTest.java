@@ -1,4 +1,4 @@
-package com.example.lehunt;
+package de.bilda.lehunt;
 
 import org.junit.Test;
 

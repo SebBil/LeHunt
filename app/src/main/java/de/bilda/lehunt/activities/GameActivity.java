@@ -1,4 +1,4 @@
-package com.example.lehunt;
+package de.bilda.lehunt.activities;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -21,6 +21,10 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import de.bilda.lehunt.R;
+import de.bilda.lehunt.fragments.HintCurrentFragment;
+import de.bilda.lehunt.fragments.HintPreviousFragment;
+import de.bilda.lehunt.classes.Hunt;
 import com.google.gson.Gson;
 import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt3.Mqtt3AsyncClient;
@@ -38,6 +42,8 @@ import org.json.JSONObject;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
@@ -58,7 +64,7 @@ public class GameActivity extends AppCompatActivity {
     private HintPreviousFragment hpf;
 
     @Override
-    @TargetApi(24)
+    //@TargetApi(24)
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
@@ -96,10 +102,7 @@ public class GameActivity extends AppCompatActivity {
                 hpf.UpdateHintList(curHunt.getHints());
                 return;
             }
-            curHunt.getHints().forEach((key, value)->{
-                if(curHunt.getCurrentStation()-1 == (int)key)
-                    hcf.UpdateHint((String)value);
-            });
+            hcf.UpdateHint(curHunt.getLastHint());
 
         });
 

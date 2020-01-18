@@ -1,4 +1,4 @@
-package com.example.lehunt;
+package de.bilda.lehunt.activities;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -10,6 +10,9 @@ import android.os.Bundle;
 import android.view.View;
 
 import com.jaalee.sdk.BeaconManager;
+
+import de.bilda.lehunt.R;
+import de.bilda.lehunt.activities.ChooseActivity;
 
 public class StartActivity extends AppCompatActivity {
 
@@ -28,7 +31,6 @@ public class StartActivity extends AppCompatActivity {
                     .setMessage("Unfortunatelly your device doesn't support Bluetooth Low Energy\nSo you cannot use this app")
                     .setNeutralButton("Close App", (dialog, which) -> finish());
             aldb.create().show();
-            finish();
         }
 
         // Check all Permissions

@@ -1,4 +1,4 @@
-package com.example.lehunt;
+package de.bilda.lehunt.fragments;
 
 import android.os.Bundle;
 
@@ -12,12 +12,15 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 
+import de.bilda.lehunt.R;
+import de.bilda.lehunt.activities.GameActivity;
+
 public class HintCurrentFragment extends Fragment {
 
     private TextView hint;
     private static HintCurrentFragment hcf;
 
-    static HintCurrentFragment GetInstance() {
+    public static HintCurrentFragment GetInstance() {
         if(hcf != null)
             return hcf;
         hcf = new HintCurrentFragment();

@@ -1,8 +1,7 @@
-package com.example.lehunt;
+package de.bilda.lehunt.fragments;
 
 import android.annotation.TargetApi;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,6 +16,9 @@ import androidx.fragment.app.Fragment;
 
 import java.util.TreeMap;
 
+import de.bilda.lehunt.R;
+import de.bilda.lehunt.activities.GameActivity;
+
 @TargetApi(24)
 public class HintPreviousFragment extends Fragment {
 
@@ -25,7 +27,7 @@ public class HintPreviousFragment extends Fragment {
     private static HintPreviousFragment hpf;
 
 
-    static HintPreviousFragment GetInstance() {
+    public static HintPreviousFragment GetInstance() {
         if(hpf != null)
             return hpf;
         hpf = new HintPreviousFragment();
