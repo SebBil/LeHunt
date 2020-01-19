@@ -42,14 +42,11 @@ import org.json.JSONObject;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 
 public class GameActivity extends AppCompatActivity {
 
-    //Jaalee BEACON Default UUID
     private static final String JAALEE_BEACON_PROXIMITY_UUID = "EBEFD083-70A2-47C8-9837-E7B5634DF524";
     private static final Region ALL_BEACONS_REGION = new Region("rid", null, null, null);
 
@@ -62,9 +59,9 @@ public class GameActivity extends AppCompatActivity {
     private int beaconMinor;
     private HintCurrentFragment hcf;
     private HintPreviousFragment hpf;
+    private boolean saveHunt = true;
 
     @Override
-    //@TargetApi(24)
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_game);
@@ -76,15 +73,7 @@ public class GameActivity extends AppCompatActivity {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             int REQUEST_ENABLE_BT = 1;
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-        } else {
-            connectToService();
         }
-
-        // Configure BeaconManager
-        beaconManager.setRangingListener(LookForNewBeacons);
-
-
-        System.out.println("gameactivity OnCreate");
 
         Intent i = getIntent();
         curHunt = (Hunt) i.getExtras().getSerializable("HUNT");
@@ -98,7 +87,6 @@ public class GameActivity extends AppCompatActivity {
         fragContainer.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
             Fragment frag = getSupportFragmentManager().findFragmentByTag("hcf");
             if(frag == null){
-                // hpf
                 hpf.UpdateHintList(curHunt.getHints());
                 return;
             }
@@ -106,43 +94,49 @@ public class GameActivity extends AppCompatActivity {
 
         });
 
-        // Mqtt Client create
-        mqttClient = Mqtt3Client.builder()
-                .identifier(curHunt.getClientID())
-                .serverHost(curHunt.getBrokerURL())
-                .buildAsync();
-
-        try {
-            Mqtt3ConnAck mqtt3ConnAck = mqttClient.connect().get();
-            if (mqtt3ConnAck.getReturnCode().isError()) {
-                Toast.makeText(this,"Client could not connect to MQTT Broker with address " + curHunt.getBrokerURL(), Toast.LENGTH_LONG).show();
-                finish();
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace();
-        }
-
-        topicPub = curHunt.getHuntID() + "/" + curHunt.getClientID() + "/up";
-        topicSub = curHunt.getHuntID() + "/" + curHunt.getClientID() + "/down";
-
         TextView tvCurrentHunt = findViewById(R.id.tvCurrentHunt);
         tvCurrentHunt.setText(String.format("Current Hunt: %s", curHunt.getHuntID()));
 
-        OnMessageCallback onMessageCallback = new OnMessageCallback(curHunt, this);
 
-        mqttClient.subscribeWith()
-                .topicFilter(topicSub)
-                .qos(MqttQos.EXACTLY_ONCE)
-                .callback(onMessageCallback)
-                .send();
-        System.out.println("Client subscribed to topic " + topicSub);
+        if(!curHunt.isFinished()) {
+            mqttClient = Mqtt3Client.builder()
+                    .identifier(curHunt.getClientID())
+                    .serverHost(curHunt.getBrokerURL())
+                    .buildAsync();
 
-        if (curHunt.getHints().size() == 0)
-            mqttClient.publishWith()
-                    .topic(topicPub)
+            try {
+                Mqtt3ConnAck mqtt3ConnAck = mqttClient.connect().get();
+                if (mqtt3ConnAck.getReturnCode().isError()) {
+                    Toast.makeText(this, "Client could not connect to MQTT Broker with address " + curHunt.getBrokerURL(), Toast.LENGTH_LONG).show();
+                    finish();
+                }
+            } catch (InterruptedException | ExecutionException e) {
+                Toast.makeText(this, "Unable to resolve host \"" + curHunt.getBrokerURL() + "\": No address associated with hostname", Toast.LENGTH_LONG).show();
+                saveHunt=false;
+                finish();
+            }
+
+            topicPub = curHunt.getHuntID() + "/" + curHunt.getClientID() + "/up";
+            topicSub = curHunt.getHuntID() + "/" + curHunt.getClientID() + "/down";
+
+            OnMessageCallback onMessageCallback = new OnMessageCallback(this);
+            beaconManager.setRangingListener(LookForNewBeacons);
+
+            connectToService();
+
+            mqttClient.subscribeWith()
+                    .topicFilter(topicSub)
                     .qos(MqttQos.EXACTLY_ONCE)
-                    .payload("{type:FirstHint,advertisement:0,station:0}".getBytes())
+                    .callback(onMessageCallback)
                     .send();
+
+            if (curHunt.getHints().size() == 0)
+                mqttClient.publishWith()
+                        .topic(topicPub)
+                        .qos(MqttQos.EXACTLY_ONCE)
+                        .payload("{type:FirstHint,advertisement:0,station:0}".getBytes())
+                        .send();
+        }
     }
 
     private RangingListener LookForNewBeacons = new RangingListener() {
@@ -165,16 +159,26 @@ public class GameActivity extends AppCompatActivity {
     };
 
     @Override
+    protected void onResume(){
+        super.onResume();
+        NotificationManager nm = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+        nm.cancelAll();
+    }
+
+    @Override
     protected void onDestroy() {
+
+        NotificationManager nm = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+        nm.cancelAll();
+
+        if(saveHunt)
+            save(curHunt);
+
+        if(!curHunt.isFinished()) {
+            beaconManager.disconnect();
+            mqttClient.disconnect();
+        }
         super.onDestroy();
-
-        System.out.println("onDestroy gameact");
-
-        save(curHunt);
-        System.out.println("BeaconManager disconnected");
-        beaconManager.disconnect();
-        System.out.println("MQTT Client disconnected");
-        mqttClient.disconnect();
     }
 
     boolean doubleBackToExitPressedOnce = false;
@@ -186,7 +190,7 @@ public class GameActivity extends AppCompatActivity {
         }
 
         this.doubleBackToExitPressedOnce = true;
-        Toast.makeText(this, "Please click BACK again to exit the hunt.\nYour hunt will be saved for the future.", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "Please click BACK again to exit the hunt.", Toast.LENGTH_SHORT).show();
 
         new Handler().postDelayed(() -> doubleBackToExitPressedOnce=false, 2000);
     }
@@ -201,36 +205,6 @@ public class GameActivity extends AppCompatActivity {
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.replace(R.id.framelayoutcontainer, frag, tag);
         fragmentTransaction.commit();
-    }
-
-    /**
-     * Start Service for the Ranging and Discovering Devices
-     */
-    private void connectToService() {
-        beaconManager.connect(() -> {
-            try {
-                beaconManager.startRangingAndDiscoverDevice(ALL_BEACONS_REGION);
-            } catch (RemoteException e) {
-                e.printStackTrace();
-            }
-        });
-    }
-
-    /**
-     * Send the message to the broker that a new Beacon was discovered
-     *
-     * @param beaconMiner the station of the beacon in integer
-     * @param station the station of the users hunt
-     */
-    private void publishMsgForNewHints(String beaconMiner, int station) {
-
-        String msg = "{type:NewBeacon,advertisement:" + beaconMiner + ",station:" + station + "}";
-        mqttClient.publishWith()
-                .topic(topicPub)
-                .qos(MqttQos.EXACTLY_ONCE)
-                .payload(msg.getBytes())
-                .send();
-
     }
 
     public void save(Hunt obj) {
@@ -282,23 +256,50 @@ public class GameActivity extends AppCompatActivity {
     }
 
     /**
+     * Start Service for the Ranging and Discovering Devices
+     */
+    private void connectToService() {
+        beaconManager.connect(() -> {
+            try {
+                beaconManager.startRangingAndDiscoverDevice(ALL_BEACONS_REGION);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    /**
+     * Send the message to the broker that a new Beacon was discovered
+     *
+     * @param beaconMiner the station of the beacon in integer
+     * @param station the station of the users hunt
+     */
+    private void publishMsgForNewHints(String beaconMiner, int station) {
+
+        String msg = "{type:NewBeacon,advertisement:" + beaconMiner + ",station:" + station + "}";
+        mqttClient.publishWith()
+                .topic(topicPub)
+                .qos(MqttQos.EXACTLY_ONCE)
+                .payload(msg.getBytes())
+                .send();
+
+    }
+
+    /**
      * Class for the Callback of messeages that came in
      */
     @TargetApi(24)
     private class OnMessageCallback implements Consumer<Mqtt3Publish> {
 
-        Hunt curHunt;
         Context context;
 
-        OnMessageCallback(Hunt hunt, Context context) {
+        OnMessageCallback(Context context) {
             this.context = context;
-            this.curHunt = hunt;
         }
 
         @Override
         public void accept(Mqtt3Publish mqtt3Publish) {
             String newHint = new String(mqtt3Publish.getPayloadAsBytes());
-            System.out.println("Incomming Message: " + newHint);
 
             /*
              * Types that can came back:
@@ -316,47 +317,35 @@ public class GameActivity extends AppCompatActivity {
 
             switch (type) {
                 case "Info":
-                    // System.out.println("Info: " + response);
                     makeToast("Info: " + response);
-                    //Toast.makeText(context, "Info: " + response, Toast.LENGTH_SHORT).show();
                     break;
                 case "Error":
-                    //System.out.println("Error: " + response);
                     makeToast("Error: " + response);
-                    //Toast.makeText(context, "Error: " + response, Toast.LENGTH_SHORT).show();
+                    saveHunt=false;
+                    finish();
                     break;
                 case "NewInformation":
                     curHunt.newHint(beaconMinor, response);
-                    //System.out.println("Response: " + response);
-                    //System.out.println("Size of Hints: " + curHunt.getHints().size());
-
+                    updateFrag();
                     if(beaconMinor == 0){
                         sendNotify("First Hint");
                     } else {
                         sendNotify(type);
                     }
-
-                    update(response, this.curHunt);
-
                     break;
                 case "Finished":
                     curHunt.newHint(beaconMinor, response);
-                    update(response, this.curHunt);
-                    System.out.println("Finished case");
+                    curHunt.setAlreadyFinished(true);
+
                     sendNotify(type);
                     alertFin(type, response);
                     break;
-                default:
-                    break;
-
             }
         }
 
         private void alertFin(String title, String message) {
             runOnUiThread(() -> {
                 AlertDialog.Builder builder = new AlertDialog.Builder(GameActivity.this);
-                //System.out.println("in finished on ui thread");
-                //set title
                 builder.setTitle(title);
                 builder
                         .setMessage(message)
@@ -366,40 +355,29 @@ public class GameActivity extends AppCompatActivity {
                                     .topicFilter(topicSub)
                                     .send();
 
-                            mqttClient.disconnect();
-                            beaconManager.disconnect();
+                            //mqttClient.disconnect();
+                            //beaconManager.disconnect();
 
                             ((Activity) context).finish();
                         });
-                System.out.println("after builder sets");
 
-                // create alert dialog
                 AlertDialog alertDialog = builder.create();
-
-                System.out.println("after create");
-
                 alertDialog.show();
             });
+        }
+
+        private void updateFrag(){
+            runOnUiThread(() -> hcf.UpdateHint(curHunt.getLastHint()));
         }
 
         private void makeToast(String msg) {
             runOnUiThread(() -> Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT).show());
         }
 
-        private void update(String s, Hunt h){
-            runOnUiThread(() -> {
-                System.out.println(s);
-                syncCurrentHunt(h);
-                hcf.UpdateHint(s);
-            });
-        }
-
         private void sendNotify(String title) {
             runOnUiThread(() -> {
-                System.out.println("in send notify");
                 sendNotification(title);
             });
         }
-
     }
 }

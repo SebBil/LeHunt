@@ -58,14 +58,14 @@
 
     <ListView
         android:id="@+id/listHunts"
-        android:layout_width="158dp"
-        android:layout_height="170dp"
-        android:layout_marginTop="16dp"
+        android:layout_width="205dp"
+        android:layout_height="211dp"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/border"
+        android:choiceMode="none"
         android:drawSelectorOnTop="false"
-        android:listSelector="@drawable/border"
-        android:background="@color/lehunt_launcher_background"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.3"
+        app:layout_constraintHorizontal_bias="0.28"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textView2"
         tools:listitem="@android:layout/simple_selectable_list_item" />
@@ -75,26 +75,25 @@
         android:layout_width="267dp"
         android:layout_height="117dp"
         android:background="@color/lehunt_launcher_background"
-        android:text="Continue the Hunt"
         android:onClick="btnResumeHuntClicked"
+        android:text="Continue the Hunt"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.416"
+        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/listHunts"
-        app:layout_constraintVertical_bias="0.514" />
+        app:layout_constraintVertical_bias="0.5" />
 
     <Button
         android:id="@+id/btnDeleteHunt"
         android:layout_width="83dp"
         android:layout_height="39dp"
-        android:layout_marginBottom="256dp"
         android:background="@color/lehunt_launcher_background"
         android:onClick="btnDeleteHuntClicked"
         android:text="Delete"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toBottomOf="@+id/listHunts"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.851"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintHorizontal_bias="0.523"
+        app:layout_constraintStart_toEndOf="@+id/listHunts" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

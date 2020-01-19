@@ -1,11 +1,10 @@
 <resources>
     <string name="app_name">LeHunt</string>
     <string name="lehunt_logo">lehunt_logo</string>
-    <string name="lehunt_desc">LeHunt\nDie digitale\nSchnitzeljagd</string>
+    <string name="lehunt_desc">LeHunt\nThe digital\nHunt</string>
 
-    <string name="begin_hunt">Bei Jagd teilnehmen</string>
-    <string name="resume_hunt">Jagd wieder aufnehmen</string>
+    <string name="begin_hunt">participate a hunt</string>
+    <string name="resume_hunt">continue a hunt</string>
 
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+
 </resources>

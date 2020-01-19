@@ -1,7 +1,6 @@
 package de.bilda.lehunt.classes;
 
 import java.io.Serializable;
-import java.util.Map;
 import java.util.Observable;
 import java.util.TreeMap;
 
@@ -10,16 +9,13 @@ public class Hunt extends Observable implements Serializable{
     private String mHuntID;
     private String mBrokerURL;
     private String mClientID;
+    private boolean alreadyFinished;
     private TreeMap<Integer, String> mHints;
-    //private List<String> mHints;
-
-    public Hunt(){
-        mHints = new TreeMap<>();
-    }
 
     public Hunt(String hID, String bURL){
         this.mHuntID = hID;
         this.mBrokerURL = bURL;
+        this.alreadyFinished = false;
 
         this.mHints = new TreeMap<>();
     }
@@ -48,15 +44,21 @@ public class Hunt extends Observable implements Serializable{
 
     /**
      * Addind a new Hint to the List of Hints
-     * @param hint
-     * @param id
+     * @param hint the response of the broker for new hints
+     * @param id the beacon station that the user currently reached
      */
-    public void newHint(int id, String hint){
-        synchronized (this) {
-            mHints.put(id, hint);
-        }
-        setChanged();
-        notifyObservers();
+    public void newHint(int id, String hint) {
+        mHints.put(id, hint);
+    }
+
+    public void setAlreadyFinished(boolean finished){
+        this.alreadyFinished = finished;
+    }
+
+    public boolean isFinished(){
+        if(alreadyFinished)
+            return true;
+        return false;
     }
 
     /**
@@ -64,24 +66,23 @@ public class Hunt extends Observable implements Serializable{
      * @return a String that include the ast entry
      */
     public String getLastHint(){
-        return mHints.lastEntry().getValue();
+        if(mHints.size() > 0)
+            return mHints.lastEntry().getValue();
+        return "";
     }
 
     /**
      * Funktion that checks if the hint is already present in the List of Hints
-     * @param id
-     * @return
+     * It is for not oversending mqtt messages to the broker, if this beacon is already found
+     * @param id the advertisment of the beacon that reached
+     * @return true if this beacon is already found
      */
     public boolean keyAlreadyPresent(int id){
-        if(mHints.containsKey(id)){
-            return true;
-        } else {
-            return false;
-        }
+        return mHints.containsKey(id);
     }
 
-    @Override
+     @Override
     public String toString(){
-        return getHuntID();
-     }
+        return this.mHuntID;
+    }
 }

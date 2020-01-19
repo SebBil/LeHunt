@@ -1,10 +1,12 @@
 package de.bilda.lehunt.activities;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
@@ -12,7 +14,6 @@ import android.view.View;
 import com.jaalee.sdk.BeaconManager;
 
 import de.bilda.lehunt.R;
-import de.bilda.lehunt.activities.ChooseActivity;
 
 public class StartActivity extends AppCompatActivity {
 
@@ -21,7 +22,6 @@ public class StartActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        System.out.println("Start activity onCreate");
         setContentView(R.layout.activity_start);
 
         // Check if device supports Bluetooth Low Energy.
@@ -34,42 +34,18 @@ public class StartActivity extends AppCompatActivity {
         }
 
         // Check all Permissions
-        System.out.println("checkPermissions");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, PERMISSION_REQUEST_COARSE_LOCATION);
         }
-
     }
 
-    /*
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
         if (requestCode == PERMISSION_REQUEST_COARSE_LOCATION) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission granted, yay! Start the Bluetooth device scan.
-            } else {
-                // Alert the user that this application requires the location permission to perform the scan.
+            if (grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                finish();
             }
         }
-    }
-    */
-
-    @Override
-    protected void onStop() {
-        System.out.println("Start activity stopped");
-        super.onStop();
-    }
-
-    @Override
-    protected void onDestroy() {
-        System.out.println("Start Activity destroyed");
-        super.onDestroy();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        System.out.println("start activity resumed");
     }
 
     public void btnBeginHuntClick(View v){

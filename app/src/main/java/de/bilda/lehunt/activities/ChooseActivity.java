@@ -2,6 +2,8 @@ package de.bilda.lehunt.activities;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -30,13 +32,12 @@ public class ChooseActivity extends AppCompatActivity {
     private List<Hunt> mStoredHunts;
     private ArrayAdapter<Hunt> mHuntAdapter;
 
-    EditText burl, huntId;
+    private EditText burl, huntId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         Intent intent = getIntent();
-        // System.out.println("choose activity onCreate");
 
         mStoredHunts = getStoredHunts();
 
@@ -51,7 +52,7 @@ public class ChooseActivity extends AppCompatActivity {
             case 1001:
                 setContentView(R.layout.activity_choose_resume);
 
-                mHuntAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, mStoredHunts);
+                mHuntAdapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_activated_1, mStoredHunts);
 
                 final ListView lvMyHunts = findViewById(R.id.listHunts);
                 lvMyHunts.setAdapter(mHuntAdapter);
@@ -64,36 +65,9 @@ public class ChooseActivity extends AppCompatActivity {
         }
     }
 
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-    }
-
-    /**
-     * getStoredHunts
-     * load all Hunts with the hints from permanent storage
-     *
-     * @return a List of the Hunts
-     */
-    private List<Hunt> getStoredHunts() {
-        ArrayList<Hunt> ret = new ArrayList<>();
-        File dirFiles = getFilesDir();
-        for (String strFile : dirFiles.list())
-        {
-            if(strFile.matches("^[a-zA-Z0-9]+.json")){
-                System.out.println(strFile);
-                ret.add(load(strFile));
-            }
-        }
-
-        return ret;
-    }
-
     public void btnDeleteHuntClicked(View v) {
         if (this.mSelectedHunt != null) {
 
-            // delete it from list
             this.mStoredHunts.remove(this.mSelectedHunt);
 
             String ext = ".json";
@@ -108,10 +82,30 @@ public class ChooseActivity extends AppCompatActivity {
             }
         }
 
-        mHuntAdapter.notifyDataSetChanged();
+        mHuntAdapter.notifyDataSetInvalidated();
     }
 
     public void btnBeginHuntClicked(View v) {
+
+        if(huntId.length() == 0){
+            Toast.makeText(this, "The field hunt id must not be empty.",Toast.LENGTH_SHORT).show();
+            return;
+        }
+        for(Hunt h : mStoredHunts){
+            if(h.getHuntID().matches(huntId.getText().toString())) {
+                Toast.makeText(this, "This huntid is already present in your saved hunts. If you want to retry, first delete the hunt.", Toast.LENGTH_LONG).show();
+                return;
+            }
+        }
+        if(!huntId.getText().toString().matches("^[a-zA-Z0-9]+")){
+            Toast.makeText(this, "Unknown convention of the huntid.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if(burl.length() == 0){
+            Toast.makeText(this, "The field broker url must not be empty.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        // TODO: 18.01.2020 Check if url is reachable on port 1883
 
         Hunt hunt = new Hunt(huntId.getText().toString(), burl.getText().toString());
         String clientid = UUID.randomUUID().toString();
@@ -122,6 +116,7 @@ public class ChooseActivity extends AppCompatActivity {
         Intent intent = new Intent(this, GameActivity.class);
         intent.putExtras(bundle);
         startActivity(intent);
+        finish();
     }
 
     public void btnResumeHuntClicked(View v) {
@@ -136,10 +131,30 @@ public class ChooseActivity extends AppCompatActivity {
         Intent intent = new Intent(this, GameActivity.class);
         intent.putExtras(bundle);
         startActivity(intent);
-
+        finish();
     }
 
-    public Hunt load(String fileName){
+    /**
+     * getStoredHunts
+     * load all Hunts with the hints from permanent storage
+     *
+     * @return a List of the Hunts
+     */
+    private List<Hunt> getStoredHunts() {
+        ArrayList<Hunt> ret = new ArrayList<>();
+        File dirFiles = getFilesDir();
+        for (String strFile : dirFiles.list())
+        {
+            if(strFile.matches("^[a-zA-Z0-9]+.json")){
+                ret.add(load(strFile));
+            }
+        }
+
+        return ret;
+    }
+
+
+    private Hunt load(String fileName){
         FileInputStream fis = null;
 
         try {

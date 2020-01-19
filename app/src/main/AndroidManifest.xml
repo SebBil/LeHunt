@@ -7,9 +7,10 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/lehunt_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
-        >
-        <activity android:name="de.bilda.lehunt.activities.StartActivity">
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+        <activity
+            android:name="de.bilda.lehunt.activities.StartActivity"
+            android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -17,13 +18,15 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="de.bilda.lehunt.activities.ChooseActivity"></activity>
         <activity
-            android:name="de.bilda.lehunt.activities.GameActivity" android:launchMode="singleTop">
+            android:name="de.bilda.lehunt.activities.ChooseActivity"
+            android:screenOrientation="portrait">
         </activity>
-
-
-        <!-- <service android:name=".BluetoothScanService" ></service> -->
+        <activity
+            android:name="de.bilda.lehunt.activities.GameActivity"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait">
+        </activity>
 
         <service android:name="com.jaalee.sdk.service.BeaconService" android:exported="false" />
     </application>
